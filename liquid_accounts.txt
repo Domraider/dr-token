@@ -1,0 +1,6 @@
+liquid_address_0001;98000
+liquid_address_0002;2000
+liquid_address_0003;50000
+liquid_address_0004;50000	
+liquid_address_0005;33000
+liquid_address_0006;67000	
