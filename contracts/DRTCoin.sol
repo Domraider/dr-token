@@ -2,31 +2,27 @@ pragma solidity ^0.4.11;
 
 import "./ConvertLib.sol";
 import "../installed_contracts/zeppelin-solidity/contracts/token/StandardToken.sol";
+import "../installed_contracts/zeppelin-solidity/contracts/ownership/Ownable.sol";
+
 // This is just a simple example of a coin-like contract.
 // It is not standards compatible and cannot be expected to talk to other
 // coin/token contracts. If you want to create a standards-compliant
 // token, see: https://github.com/ConsenSys/Tokens. Cheers!
 
-contract DRTCoin is StandardToken {
+contract DRTCoin is StandardToken, Ownable {
 
 	// FIELDS ---------------------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------
     // Constant token specific fields
 	string public name = "DOMRaider Token";
 	string public symbol = "DRT";
-	uint256 public decimals = 18;
-	//uint256 public INITIAL_SUPPLY = 1000000000;
-	uint public constant DEFROST_DURATION = 2 years; // Time needed for iced tokens to thaw into liquid tokens
-	//uint public constant MAX_NUM_TOKEN_OFFERED_TO_PUBLIC = 47222222 ** decimals; // Max amount of tokens offered to the public
-    //uint public constant TOTAL_NUM_TOKEN = 55555556 ** decimals; // Max amount of total tokens raised during all contributions (includes stakes of patrons)
-	//uint public constant MAX__NUM_TOKEN_PREVENTE = 55555556 ** decimals;
-
-	// Fields that changed in constructor (then forever constant)
-    address public domraiderOwner; // Can change to other minting contribution contracts but only until total amount of token minted
+	uint256 public decimals = 18; //maybe 0
+	uint public constant DEFROST_DURATION = 20000; // Time needed for iced tokens to thaw into liquid tokens
+	uint256 public constant MAX_SUPPLY_NBTOKEN  = 1000000000; // Max amount of tokens offered to the public
+    address public domraiderOwner;
     uint public startTime; // Contribution start time in seconds
     uint public endTime; // Contribution end time in seconds
-
-	// Fields that can be changed by functions
+    // Fields that can be changed by functions
     mapping (address => uint) icedBalances;
 	// -------------------------------------------------------------------------------------------
 	// end FIELDS ------------------------------------------------------------------------------------
@@ -35,11 +31,6 @@ contract DRTCoin is StandardToken {
 
 	// MODIFIERS ---------------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------
-
-    modifier only_domraider {
-        assert(msg.sender == domraiderOwner);
-        _;
-    }
 
     modifier is_later_than(uint x) {
         assert(now > x);
@@ -54,15 +45,6 @@ contract DRTCoin is StandardToken {
 	// end MODIFIERS -----------------------------------------------------------------------------
 	
 
-	// CONSTANT METHODS --------------------------------------------------------------------------
-	// -------------------------------------------------------------------------------------------
-    function lockedBalanceOf(address _owner) constant returns (uint balance) {
-        return icedBalances[_owner];
-    }
-	// -------------------------------------------------------------------------------------------
-	// end CONSTANT METHODS ----------------------------------------------------------------------------
-
-
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
@@ -73,25 +55,25 @@ contract DRTCoin is StandardToken {
         endTime = setEndTime;
 	}
 
-	function assignLiquidToken(address recipient, uint amount)
-        external
-        only_domraider
-    {
-        balances[recipient] = balances[recipient].add(amount);
-        totalSupply = totalSupply.add(amount);
+    function lockedBalanceOf(address _owner) constant returns (uint balance) {
+            return icedBalances[_owner];
+    }
+
+    function assignLiquidToken(address recipient, uint amount) onlyOwner {
+            transfer(recipient, amount );
     }
 
 
-	function assignIcedToken(address recipient, uint amount)
+    function assignIcedToken(address recipient, uint amount)
         external
-        only_domraider
+        onlyOwner
     {
         icedBalances[recipient] = icedBalances[recipient].add(amount);
         totalSupply = totalSupply.add(amount);
     }
 
-   
-	/// Pre: Prevent transfers until contribution period is over.
+
+    /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer DMR from msg.sender
     /// Note: ERC20 interface
     function transfer(address recipient, uint amount)
@@ -109,9 +91,11 @@ contract DRTCoin is StandardToken {
         return super.transferFrom(sender, recipient, amount);
     }
 
- 
-	function killContract() only_domraider {
-    	suicide(domraiderOwner);
-	}
+
+    function killContract() onlyOwner {
+        suicide(domraiderOwner);
+    }
+
+
 
 }
