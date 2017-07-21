@@ -1,4 +1,4 @@
-pragma solidity ^0.4.2;
+pragma solidity ^0.4.11;
 
 import "./ConvertLib.sol";
 import "../installed_contracts/zeppelin-solidity/contracts/token/StandardToken.sol";
@@ -22,7 +22,6 @@ contract DRTCoin is StandardToken {
 	//uint public constant MAX__NUM_TOKEN_PREVENTE = 55555556 ** decimals;
 
 	// Fields that changed in constructor (then forever constant)
-    address public minter; // Contribution contract(s)
     address public domraiderOwner; // Can change to other minting contribution contracts but only until total amount of token minted
     uint public startTime; // Contribution start time in seconds
     uint public endTime; // Contribution end time in seconds
@@ -36,10 +35,6 @@ contract DRTCoin is StandardToken {
 
 	// MODIFIERS ---------------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------
-    modifier only_minter {
-        assert(msg.sender == minter);
-        _;
-    }
 
     modifier only_domraider {
         assert(msg.sender == domraiderOwner);
@@ -71,26 +66,25 @@ contract DRTCoin is StandardToken {
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
-	function DRTCoin(address setMinter, uint setStartTime, uint setEndTime) {
+	function DRTCoin(uint setStartTime, uint setEndTime) {
 		totalSupply = 0;
-		minter = setMinter;
         domraiderOwner = msg.sender;
         startTime = setStartTime;
         endTime = setEndTime;
 	}
 
-	function mintLiquidToken(address recipient, uint amount)
+	function assignLiquidToken(address recipient, uint amount)
         external
-        only_minter
+        only_domraider
     {
         balances[recipient] = balances[recipient].add(amount);
         totalSupply = totalSupply.add(amount);
     }
 
 
-	function mintIcedToken(address recipient, uint amount)
+	function assignIcedToken(address recipient, uint amount)
         external
-        only_minter
+        only_domraider
     {
         icedBalances[recipient] = icedBalances[recipient].add(amount);
         totalSupply = totalSupply.add(amount);
@@ -115,10 +109,7 @@ contract DRTCoin is StandardToken {
         return super.transferFrom(sender, recipient, amount);
     }
 
- 	/// Post: New minter can now create tokens up to MAX_TOTAL_TOKEN_AMOUNT.
-    /// Note: This allows additional contribdomraiderOwnerution periods at a later stage, while still using the same ERC20 compliant contract.
-    function changeMintingAddress(address newMinterAddress) only_domraider { minter = newMinterAddress; }
-
+ 
 	function killContract() only_domraider {
     	suicide(domraiderOwner);
 	}
