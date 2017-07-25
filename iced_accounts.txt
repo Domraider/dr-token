@@ -1,4 +1,0 @@
-iced_address_0001;50000
-iced_address_0002;50000
-iced_address_0003;50000
-iced_address_0004;50000

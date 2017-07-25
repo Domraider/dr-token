@@ -1,8 +1,8 @@
 pragma solidity ^0.4.11;
 
 import "./ConvertLib.sol";
-import "../installed_contracts/zeppelin-solidity/contracts/token/StandardToken.sol";
-import "../installed_contracts/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./StandardToken.sol";
+import "./Ownable.sol";
 
 // This is just a simple example of a coin-like contract.
 // It is not standards compatible and cannot be expected to talk to other
@@ -14,28 +14,22 @@ contract DRTCoin is StandardToken, Ownable {
 	// FIELDS ---------------------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------
     // Constant token specific fields
-	string public name = "DOMRaider Token";
-	string public symbol = "DRT";
+	string public name = "ANY Token";
+	string public symbol = "ANY";
 	uint256 public decimals = 18; //maybe 0
 	uint public constant DEFROST_DURATION = 20000; // Time needed for iced tokens to thaw into liquid tokens
-	uint256 public constant MAX_SUPPLY_NBTOKEN  = 1000000000; // Max amount of tokens offered to the public
+	uint256 public constant INIT_SUPPLY_NBTOKEN  = 1000000000; // Max amount of tokens offered to the public
     address public domraiderOwner;
-    uint public startTime; // Contribution start time in seconds
-    uint public endTime; // Contribution end time in seconds
+    // Warning: This looks like an address but has an invalid checksum. If this is not used as an address, please prepend '00'
+    uint256 constant D160 = 0x10000000000000000000000000000000000000000;
+    //uint256 constant D161 = 0x20000000000000000000000000000000000000000;   
+    //uint256 constant compareInt = 1461501637330902918203684832716283019655932542975; // D160-1
     // Fields that can be changed by functions
-    mapping (address => uint) icedBalances;
+    mapping (address => bool) icedBalances; 
+    mapping (uint => address) public addressmaptmp; 
+    mapping (uint => uint) public amountsmaptmp; 
 	// -------------------------------------------------------------------------------------------
 	// end FIELDS ------------------------------------------------------------------------------------
-
-
-
-	// MODIFIERS ---------------------------------------------------------------------------------
-	// -------------------------------------------------------------------------------------------
-
-    modifier is_later_than(uint x) {
-        assert(now > x);
-        _;
-    }
 
     /*modifier max_num_token_not_reached(uint amount) {
         assert(safeAdd(totalSupply, amount) <= MAX_TOTAL_TOKEN_AMOUNT);
@@ -48,32 +42,28 @@ contract DRTCoin is StandardToken, Ownable {
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
-	function DRTCoin(uint setStartTime, uint setEndTime) {
-		totalSupply = 0;
+	function DRTCoin() {
+		//totalSupply = MAX_SUPPLY_NBTOKEN;
         domraiderOwner = msg.sender;
-        startTime = setStartTime;
-        endTime = setEndTime;
+        balances[msg.sender] = INIT_SUPPLY_NBTOKEN / 2;
+        //uint nDays = 2;
+        //endtime = now + (60 * 60 * 24 * nDays);
 	}
 
-    function lockedBalanceOf(address _owner) constant returns (uint balance) {
-            return icedBalances[_owner];
+    function assignToken(address recipient, uint amount, bool isIced) onlyOwner {
+        transfer(recipient, amount);
+        icedBalances[recipient] = isIced;
     }
 
-    function assignLiquidToken(address recipient, uint amount) onlyOwner {
-            transfer(recipient, amount );
-    }
+    /*function defrostIcedBalancesForNextMonth(address recipient) onlyOwner {
+            bool isIced =icedBalances[recipient];
+            if(isIced){
+                al transfer(recipient, amount);
+            }
+    }*/
 
 
-    function assignIcedToken(address recipient, uint amount)
-        external
-        onlyOwner
-    {
-        icedBalances[recipient] = icedBalances[recipient].add(amount);
-        totalSupply = totalSupply.add(amount);
-    }
-
-
-    /// Pre: Prevent transfers until contribution period is over.
+    /*// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer DMR from msg.sender
     /// Note: ERC20 interface
     function transfer(address recipient, uint amount)
@@ -89,8 +79,82 @@ contract DRTCoin is StandardToken, Ownable {
         is_later_than(endTime)
     {
         return super.transferFrom(sender, recipient, amount);
+    }*/
+
+    // ASSIGN TOKENS --------------------------------------------------------
+    bool public batchAssignStopped;
+    // The 160 LSB is the address of the balance
+    // The 96 MSB is the balance of that address.
+    function batchAssignTokens(uint[] data) {
+        if ((msg.sender != owner)||(batchAssignStopped))
+            throw;
+
+        for (uint i=0; i<data.length; i++) {
+            address toaddress = address( data[i] & (D160-1) );
+            uint amount = data[i] / D160;
+            if (balances[toaddress] == 0) {   // In case it's filled two times, it only increments once
+                transferFrom(msg.sender, toaddress, amount);
+            }
+        }
     }
 
+    function batchAssignTokens2Arrays(address[] vaddr, uint[]vamounts) {
+
+        /*if ((msg.sender != owner)||(batchAssignStopped))
+            throw;
+
+        if (vaddr.length != vamounts.length)
+            throw;*/
+
+        for (uint i=0; i<vaddr.length; i++) {
+            address toaddress = vaddr[i];
+            uint amount = vamounts[i];
+            if (balances[toaddress] == 0) {   // In case it's filled two times, it only increments once
+                balances[toaddress] = amount;
+                totalSupply += amount;
+            }
+            //transferFrom(msg.sender, toaddress, amount);
+        }
+    }
+
+    function stopBatchAssign() {
+        if ((msg.sender != owner)||(batchAssignStopped))
+            throw;    
+        batchAssignStopped= true;
+    }  
+
+    function testSplitUintWriteInTmp (uint data)  {
+        //databis = address(data);
+        uint uia = data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;       
+        address toaddress = address(uia);
+        addressmaptmp[0]=toaddress;
+        //toaddress = address( data & (D160-1) );
+        //toaddress = address( data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF );
+        //toaddress = address( data % 2 ** 160 );
+        amountsmaptmp[0] = data / D160;
+    }
+
+
+    function testSplitUint(uint256 data) constant returns (address databis, uint256 uia, address toaddress, uint256 amount)  {
+        databis = address(data);
+        uia = data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;       
+        toaddress = address(uia);
+        //toaddress = address( data & (D160-1) );
+        //toaddress = address( data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF );
+        //toaddress = address( data % 2 ** 160 );
+        amount = data / D160;
+    }
+
+    function getAddressBalance(address addr) constant returns (uint256 balance)  {
+        balance = balances[addr];
+    }
+
+    function getAddressAndBalance(address addr) constant returns (address addr2, uint256 balance)  {
+        addr2 = addr;
+        balance = balances[addr];
+    }
+
+    // ----------------------------------------------------------------------
 
     function killContract() onlyOwner {
         suicide(domraiderOwner);
