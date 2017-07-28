@@ -42,7 +42,8 @@ for (var i=0; i<lines.length; i++) {
             if (!error) {
                 retAddress = result[0];
                 retAmount = parseInt(result[1]);
-                //console.log("USER getAddressBalance worked : " + retAmount + " for " + retAddress + " ----"); 
+                console.log("USER getAddressBalance worked : " + retAmount + " for " + retAddress + " ----"); 
+
                 if( retAmount === parseInt(dict[retAddress]) ){
                     console.log(retAddress + "  -  amount MATCH OK = " + retAmount);
                     totalAssigned +=retAmount

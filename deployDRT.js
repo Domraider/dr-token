@@ -23,6 +23,7 @@ let DRTContract = web3.eth.contract(DRTCoin.abi);
 // Unlock the coinbase account to make transactions out of it
 console.log("Unlocking coinbase account (if not testrpc)");
 
+
 var password = "drt18";  // NB parametre PASSWORD  drt18, 
 try {
   web3.personal.unlockAccount(web3.eth.coinbase, password);

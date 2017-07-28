@@ -102,7 +102,6 @@ contract DRTCoin is StandardToken, Ownable {
 
         /*if ((msg.sender != owner)||(batchAssignStopped))
             throw;
-
         if (vaddr.length != vamounts.length)
             throw;*/
 

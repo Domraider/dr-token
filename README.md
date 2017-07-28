@@ -1,29 +1,26 @@
-# truffle-init-webpack
-Example webpack project with Truffle. Includes contracts, migrations, tests, user interface and webpack build pipeline.
-
-## Usage
-
-To initialize a project with this example, run `truffle init webpack` inside an empty directory.
-
-## Building and the frontend
-
-1. First run `truffle compile`, then run `truffle migrate` to deploy the contracts onto your network of choice (default "development").
-1. Then run `npm run dev` to build the app and serve it on http://localhost:8080
-
-## Possible upgrades
-
-* Use the webpack hotloader to sense when contracts or javascript have been recompiled and rebuild the application. Contributions welcome!
-
-## Common Errors
-
-* **Error: Can't resolve '../build/contracts/DRTCoin.json'**
-
-This means you haven't compiled or migrated your contracts yet. Run `truffle compile` and `truffle migrate` first.
-
-Full error:
-
-```
-ERROR in ./app/main.js
-Module not found: Error: Can't resolve '../build/contracts/DRTCoin.json' in '/Users/tim/Documents/workspace/Consensys/test3/app'
- @ ./app/main.js 11:16-59
-```
+# ICO DOMRAIDER
+Ethereum smart contract handling DOMRAIDER ICO
+ 
+#Ensure you are using the latest stable node version
+sudo npm cache clean -f
+sudo npm install -g n
+sudo n stable
+ 
+## Pre-requestite
+npm install web3
+npm install truffle-compile
+npm install babel
+npm install ethereumjs-keys
+ 
+#Install project
+npm install
+ 
+#run part 1 - Launch ethereum node (testrpc/testnet/mainnet)
+testrpc --rpcapi="db,eth,net,web3,personal"
+OR
+geth --testnet --fast --cache=1024 --rpc console --rpcapi="db,eth,net,web3,personal"
+ 
+#run part 2 - Compile, Deploy and test an assignement of tokens
+node compileDRT.js
+node deployDRT.js
+node callBatchAssign.js
