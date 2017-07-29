@@ -1,0 +1,8 @@
+{
+      	"chunkSize": "5",
+	"filePath": "generated_input_accounts_amounts.txt",
+	"intervalSec": "45",
+	"contractaddress": "0x04e70454dc3383cc3942fa2d036e652b224bb088",
+	"accountpwd":"drt18",
+	"mode":"count"
+}

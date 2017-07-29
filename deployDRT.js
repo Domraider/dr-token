@@ -30,7 +30,7 @@ try {
 } catch(e) {
   console.log(e);
   return;
-}
+} 
 
 web3.eth.defaultAccount=web3.eth.accounts[0]
 
