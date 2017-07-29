@@ -1,11 +1,24 @@
 "use strict";
 
+const path = require('path');
+
+// LOAD PARAMETERS --------------------------------
+const ETHNODE_FILEPATH = path.resolve(__dirname) + '/PARAMS/ethereum_node.txt'
+const PWD_FILEPATH = path.resolve(__dirname) + '/PARAMS/owner_pwd.txt'
+var urlEthereumNode = require('fs').readFileSync(ETHNODE_FILEPATH, 'utf-8')
+var ownerPassword = require('fs').readFileSync(PWD_FILEPATH, 'utf-8')
+console.log('urlEthereumNode = ' + urlEthereumNode)
+console.log('ownerPwd = ' + ownerPassword)
+
+
+const SMARTCONTRACT_ADDRESS_FILEPATH = path.resolve(__dirname) + '/OUTPUTS/smart-contract-address.txt'
+
 let fs = require("fs");
 let Web3 = require('web3'); // https://www.npmjs.com/package/web3
 const DRTCoin = require('./build/DRTCoin.json');
 
 let web3 = new Web3();
-web3.setProvider(new web3.providers.HttpProvider('http://localhost:8545'));
+web3.setProvider(new web3.providers.HttpProvider(urlEthereumNode));
 
 console.log("abi = " + DRTCoin.abi)
 
@@ -15,25 +28,18 @@ let code = DRTCoin.bytecode;
 //console.log("code = " + code)
 
 // Create Contract proxy class
-//const DRTContract = api.newContract(DRTCoin.abi);
-
-
 let DRTContract = web3.eth.contract(DRTCoin.abi);
 
 // Unlock the coinbase account to make transactions out of it
 console.log("Unlocking coinbase account (if not testrpc)");
-
-
-var password = "drt18";  // NB parametre PASSWORD  drt18, 
 try {
-  web3.personal.unlockAccount(web3.eth.coinbase, password);
+  web3.personal.unlockAccount(web3.eth.accounts[0], ownerPassword);
 } catch(e) {
   console.log(e);
   return;
 } 
 
 web3.eth.defaultAccount=web3.eth.accounts[0]
-
 
 let ethBal = web3.fromWei(web3.eth.getBalance(web3.eth.accounts[0]), "ether");
 console.log("ethBal = " + ethBal);
@@ -64,6 +70,8 @@ async function waitBlock() {
     if (receipt && receipt.contractAddress) {
       console.log("Your contract has been deployed at http://testnet.etherscan.io/address/" + receipt.contractAddress);
       console.log("Note that it might take 30 - 90 sceonds for the block to propagate befor it's visible in etherscan.io");
+      var filewriter = fs.createWriteStream(SMARTCONTRACT_ADDRESS_FILEPATH);
+      filewriter.write(receipt.contractAddress)
       break;
     }
     console.log("Waiting a mined block to include your contract... currently in block " + web3.eth.blockNumber);

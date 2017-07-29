@@ -1,20 +1,30 @@
 const path = require('path');
 const fs = require('fs');
-var csv = require('ya-csv');
 var crypto = require('crypto');
 
+// LOAD PARAMETERS --------------------------------
+const ETHNODE_FILEPATH = path.resolve(__dirname) + '/PARAMS/ethereum_node.txt'
+const NUMACCOUNTS_FILEPATH = path.resolve(__dirname) + '/PARAMS/num_accounts_2_create.txt'
+var urlEthereumNode = require('fs').readFileSync(ETHNODE_FILEPATH, 'utf-8')
+var numAccounts2Create = require('fs').readFileSync(NUMACCOUNTS_FILEPATH, 'utf-8')
+console.log('urlEthereumNode = ' + urlEthereumNode)
+console.log('numAccounts2Create = ' + numAccounts2Create)
+
 const Web3 = require('web3')
-let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"))
-console.log('Web3')
+let web3 = new Web3(new Web3.providers.HttpProvider(urlEthereumNode))
+console.log('Web3 OK')
 
-const TEST_ACCOUNTS_FILEPATH = path.resolve(__dirname) + '/generated_input_accounts_amounts.txt';
+if(web3.eth.accounts.length <=1){
+  console.log("Vous ne pouvez pas lancer ce script parce que vous n'avez pasassez d'accounts. SVP, gérérez des accounts d'abord." )
+  return;
+}
 
-//var writer = csv.createCsvStreamWriter(fs.createWriteStream(TEST_ACCOUNTS_FILEPATH));  
+const GENERATED_ACCOUNTS_FILEPATH = path.resolve(__dirname) + '/OUTPUTS/generated_input_accounts_amounts.txt';
+const GENERATED_NUMTOKENS_FILEPATH = path.resolve(__dirname) + '/OUTPUTS/generated_number_of_tokens.txt'
 
-var numAccounts2Create = 1000
 var arrayAccounts = []
 
-//function code taken from http://blog.tompawlak.org/how-to-generate-random-values-nodejs-javascript
+// generate randoms
 function randomValueHex (len) {
     return crypto.randomBytes(Math.ceil(len/2))
         .toString('hex') // convert to hexadecimal format
@@ -26,7 +36,6 @@ function randomValueInt () {
     var high = 100000;
     return parseInt(Math.random() * (high - low) + low)
 }
-
 
 var separator =','
 cnt=0;
@@ -46,25 +55,28 @@ for(var a = 0; a < web3.eth.accounts.length ;a++){
 }
 
 for(var k = cntTrueAdded; k < numAccounts2Create ;k++){    
-    console.log(cnt + " - fake account: " + fakeAccount)
     amount = randomValueInt()
     var fakeAccount = '0x'+ randomValueHex(40);
+    console.log(cnt + " - fake account: " + fakeAccount)
     var strline = fakeAccount + separator+ amount
     arrayAccounts.push(strline)
     sumAmounts+=amount;
     cnt++
 }
 
-var filewriter = fs.createWriteStream(TEST_ACCOUNTS_FILEPATH);
+console.log('sumAmounts = ' + sumAmounts)
 
-
+var filewriter = fs.createWriteStream(GENERATED_ACCOUNTS_FILEPATH);
 arrayAccounts.forEach(  
     function addLine(value) { 
       filewriter.write(value+'\n')
   }  
 );  
 
-console.log('sumAmounts = ' + sumAmounts)
+
+var filewriter2 = fs.createWriteStream(GENERATED_NUMTOKENS_FILEPATH);
+filewriter2.write(sumAmounts.toString())
+
 
 
 
