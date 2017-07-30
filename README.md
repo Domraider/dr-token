@@ -50,20 +50,20 @@ You need to fullfill files in the '/PARAMS' directory to set your own parameters
 
 #run part 4 - Compile, Deploy and test an assignement of tokens
 -- node generateBrandNewAccounts.js --------------------------------------------
-Ce script genère 'numAccounts2Create' accounts. 
-Il prends d'abord les N VRAI accounts qui sont dans le compte ethereum, 
-puis il crée 'numAccounts2Create-N' FAUX adresses ethereum
-Il associe aussi une quantité de tokens aléatoire (entre 1 e 100.000) à chaque adresse, vrai ou faux.
-    PARAMS: numAccounts2Create = numbre d'account qu'on veut créer
-            urlEthereumNode = url du noeud Ethereum (d'où lire les VRAIS accounts, probablement http://localhost:8545)  
-    OUTPUT: le file 'generated_input_accounts_amounts.txt', qui a ce format :
+Thid script generate 'numAccounts2Create' accounts. 
+It reads all TRUE accounts that are in the ethereum node instance (typically few: less then 10), 
+then it creates 'numAccounts2Create-N' FAKE ethereum addresses
+It also assign a random number of tokens (between 1 and 100.000) at each addresse (TRUE or FAKE).
+    PARAMS: numAccounts2Create = number of accounts you want to create
+            urlEthereumNode = Ethereum node URL (from where TRUE accounts are read, likely http://localhost:8545)  
+    OUTPUT: the 'generated_input_accounts_amounts.txt' file, which has this format :
                 0x052d1291f7d121319d1f82d637f33867aa637e48,45489
                 0xbd99de6e1ffeee38569fddee3434cb6c9db079c0,81855
                 0x20d5e3da977dd185722a1c1bd7346a797a90ee6c,98488
                 0x0dde0adde07b8f87a11c4852287e287a9d87a20b,86046
                 ... 
-            le file 'generated_number_of_tokens.txt' qui contient le nombre total de tokens attribué
-    CONTRAINTES: il faut avoir au moins un account ethereum (en plus de l'account de base) sinon le script s'arrête.
+            the 'generated_number_of_tokens.txt' file whit the total number of tokens assigned
+    CONTRAINTES: you need at least one ethereum account (different from the base account) otherwise the script hangs in error.
 
 
 -- node compileDRT.js --------------------------------------------
@@ -72,16 +72,19 @@ compile le smart contract
 
 -- node deployDRT.js  --------------------------------------------
 déploie le smart contract
-    PARAMS: urlEthereumNode = url du noeud Ethereum vers lequel faire le Deploy
-            ownerPassword = password de l'account 0 ethereum qui est par convention l'owner du smart contract 
-    OUTPUT: le ficher "smart-contract-address.txt', qui contint l'adresse ethereum du smart contract
+    PARAMS: urlEthereumNode = Ethereum node location, where smart contract is deployed
+            ownerPassword = ethereum account 0 password, conventionally the smart contract owner 
+    OUTPUT: the "smart-contract-address.txt' file, specifying the smart contract address
 
 
 
--- node callBatchAssign.js  --------------------------------------------
-    PARAMS: urlEthereumNode = url du noeud Ethereum (où appeler le smart contract pour assigner les tokens) 
-
-
+-- node AssignScheduler.js  --------------------------------------------
+    PARAMS: urlEthereumNode = Ethereum node location, where smart contract is called to assign tokens
+            ownerPassword = ethereum account 0 password, conventionally the smart contract owner 
+            chunkSize = size of accounts/amounts chunks 
+            assignIntervalSec = waiting time in seconds between to smat-contract calls
+            contractAddress = the "smart-contract-address.txt' file, specifying the smart contract address
+            ACCOUNTSAMOUNTS_FILEPATH = file previously generated with accounts and amounts
 
 -- node verifyBatchAssign.js  --------------------------------------------
 
