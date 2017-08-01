@@ -43,22 +43,40 @@ cntTrueAdded=0;
 sumAmounts=0;
 for(var a = 0; a < web3.eth.accounts.length ;a++){
   
+  var strline;
   if(cnt>0){ // skip first one    
-    console.log(cnt + " - true account: " +  web3.eth.accounts[a])
+    
     amount = randomValueInt()
-    var strline = web3.eth.accounts[a] +separator +amount
+    if(cnt<=5){ 
+      // first 5 = ADVISORS
+      console.log(cnt + " - true account: " +  web3.eth.accounts[a])
+      strline = web3.eth.accounts[a] +separator +amount + separator + '0'
+    }else{
+      // OTHERS INVESTORS
+      console.log(cnt + " - true account: " +  web3.eth.accounts[a])
+      strline = web3.eth.accounts[a] +separator +amount + separator + '1'
+    }
     arrayAccounts.push(strline)
     sumAmounts+=amount;
+
     cntTrueAdded++;
   }
   cnt++
 }
 
+cnt=0
 for(var k = cntTrueAdded; k < numAccounts2Create ;k++){    
     amount = randomValueInt()
     var fakeAccount = '0x'+ randomValueHex(40);
-    console.log(cnt + " - fake account: " + fakeAccount)
-    var strline = fakeAccount + separator+ amount
+    if(cnt<=5){
+          console.log(cnt + " - fake account: " + fakeAccount)
+          strline = fakeAccount + separator+ amount+ separator+ '0'
+    }
+    else
+    {
+          console.log(cnt + " - fake account: " + fakeAccount)
+          strline = fakeAccount + separator+ amount+ separator+ '1'
+    }
     arrayAccounts.push(strline)
     sumAmounts+=amount;
     cnt++
