@@ -3,6 +3,7 @@ pragma solidity ^0.4.11;
 import "./ConvertLib.sol";
 import "./StandardToken.sol";
 import "./Ownable.sol";
+import "./SafeMath.sol";
 
 // This is just a simple example of a coin-like contract.
 // It is not standards compatible and cannot be expected to talk to other
@@ -11,154 +12,132 @@ import "./Ownable.sol";
 
 contract DRTCoin is StandardToken, Ownable {
 
-	// FIELDS ---------------------------------------------------------------------------------------
-	// -------------------------------------------------------------------------------------------
-    // Constant token specific fields
-	string public name = "ANY Token";
-	string public symbol = "ANY";
-	uint256 public decimals = 18; //maybe 0
-	uint public constant DEFROST_DURATION = 20000; // Time needed for iced tokens to thaw into liquid tokens
-	uint256 public constant INIT_SUPPLY_NBTOKEN  = 1000000000; // Max amount of tokens offered to the public
-    address public domraiderOwner;
-    // Warning: This looks like an address but has an invalid checksum. If this is not used as an address, please prepend '00'
-    uint256 constant D160 = 0x10000000000000000000000000000000000000000;
-    //uint256 constant D161 = 0x20000000000000000000000000000000000000000;   
-    //uint256 constant compareInt = 1461501637330902918203684832716283019655932542975; // D160-1
-    // Fields that can be changed by functions
-    mapping (address => bool) icedBalances; 
-    mapping (uint => address) public addressmaptmp; 
-    mapping (uint => uint) public amountsmaptmp; 
-	// -------------------------------------------------------------------------------------------
-	// end FIELDS ------------------------------------------------------------------------------------
-
-    /*modifier max_num_token_not_reached(uint amount) {
-        assert(safeAdd(totalSupply, amount) <= MAX_TOTAL_TOKEN_AMOUNT);
-        _;
-    }*/
-	// -------------------------------------------------------------------------------------------
-	// end MODIFIERS -----------------------------------------------------------------------------
-	
+	/* Overriding some ERC20 variables */
+	string public name      = "DomRaider Coin";
+	string public symbol    = "DRT";
+	uint256 public decimals = 18; //to be confirmed
+	/* DRT specific variables */
+	// Max amount of tokens minted - Exact value inputed avec strech goals and before deploying contract
+	uint256 public constant MAX_SUPPLY_NBTOKEN    = 1000000000 * 10 ** decimals;
+	// Freeze duration for advisors accounts
+	uint256 public constant START_ICO_TIMESTAMP   = 1501595111 ; // 1st of august 2017 15h45 for testing
+	uint public constant DEFROST_PERIOD           = 43200; // 1 month in minutes
+	uint public constant DEFROST_MONTHLY_PERCENT  = 10 ; // 10% per month is automaticaly defrosted
+	uint public constant DEFROST_INITIAL_PERCENT  = 20 ; // 80% locked
+	// Fields that can be changed by functions
+	address[] icedBalances ;
+  // mapping (address => bool) icedBalances; //Initial implementation as a mapping
+	mapping (address => uint256) icedBalances_frosted;
+	mapping (address => uint256) icedBalances_defrosted;
+	// Variable usefull for verifying that the assignedSupply matches that totalSupply
+	uint256 public assignedSupply;
+	//Boolean to allow or not the initial assignement of token (batch)
+	bool public batchAssignStopped;
 
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
 	function DRTCoin() {
-		//totalSupply = MAX_SUPPLY_NBTOKEN;
-        domraiderOwner = msg.sender;
-        balances[msg.sender] = INIT_SUPPLY_NBTOKEN / 2;
-        //uint nDays = 2;
-        //endtime = now + (60 * 60 * 24 * nDays);
+      owner                = msg.sender;
+      balances[owner]      = MAX_SUPPLY_NBTOKEN / 2;
+			totalSupply          = MAX_SUPPLY_NBTOKEN;
+			assignedSupply       = MAX_SUPPLY_NBTOKEN / 2;
 	}
 
-    function assignToken(address recipient, uint amount, bool isIced) onlyOwner {
-        transfer(recipient, amount);
-        icedBalances[recipient] = isIced;
-    }
+  function assignToken(address recipient, uint amount, bool isIced) onlyOwner {
+			// for testing purpose
+  }
 
-    /*function defrostIcedBalancesForNextMonth(address recipient) onlyOwner {
-            bool isIced =icedBalances[recipient];
-            if(isIced){
-                al transfer(recipient, amount);
-            }
-    }*/
+	/**
+   * @dev Transfer tokens in batches (of adresses)
+   * @param _vaddr address The address which you want to send tokens from
+   * @param _vamounts address The address which you want to transfer to
+   */
+  function batchAssignTokens(address[] _vaddr, uint[] _vamounts, bool[] _vIcedBalance ) onlyOwner {
+			require ( batchAssignStopped == false );
+			require ( _vaddr.length == _vamounts.length );
+			//Looping into input arrays to assign target amount to each given address
+      for (uint index=0; index<_vaddr.length; index++) {
+          address toAddress = _vaddr[index];
+          uint amount = _vamounts[index];
+          if (balances[toAddress] == 0) {
+						// In case it's filled two times, it only increments once
+						// Assigns the balance
+						assignedSupply += amount ;
+						if (  _vIcedBalance[index] == false ) {
+							// Normal account
+							balances[toAddress] = amount;
+							// TODO allowance ??
+						}
+						else {
+							// Iced account. The balance is not affected here
+							icedBalances.push(toAddress) ;
+							balances[toAddress]               = amount * DEFROST_INITIAL_PERCENT / 100;
+							icedBalances_frosted[toAddress]   = amount * (100 - DEFROST_INITIAL_PERCENT) / 100;
+							icedBalances_defrosted[toAddress] = amount * DEFROST_INITIAL_PERCENT / 100;
+						}
+					}
+			}
+	}
 
+	/**
+   * @dev Defrost token (for advisors)
+	 Method called by the owner once per defrost period (1 month)
+   */
+  function defrostToken() onlyOwner {
+		// Looping into the iced accounts
+		for (uint index=0; index<icedBalances.length; index++) {
+			address currentAddress  = icedBalances[index];
+			uint256 amountTotal     = icedBalances_frosted[currentAddress]+ icedBalances_defrosted[currentAddress];
+			//uint256 amountToRelease = amountTotal * DEFROST_MONTHLY_PERCENT / 100;
+			uint256 targetDeFrosted = (minimum(100,DEFROST_INITIAL_PERCENT + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT))*amountTotal;
+			uint256 amountToRelease = targetDeFrosted - icedBalances_defrosted[currentAddress] ;
+			if ( amountToRelease > 0 ) {
+				icedBalances_frosted[currentAddress]   -= amountToRelease;
+				icedBalances_defrosted[currentAddress] += amountToRelease;
+				balances[currentAddress]               += amountToRelease;
+			}
+		}
+	}
 
-    /*// Pre: Prevent transfers until contribution period is over.
-    /// Post: Transfer DMR from msg.sender
-    /// Note: ERC20 interface
-    function transfer(address recipient, uint amount)
-        is_later_than(endTime)
-    {
-        return super.transfer(recipient, amount);
-    }
+	function elapedMonthsFromICOStart() constant returns (uint elapsed) {
+		elapsed = ((now-START_ICO_TIMESTAMP)/60)/DEFROST_PERIOD ;
+	}
 
-    /// Pre: Prevent transfers until contribution period is over.
-    /// Post: Transfer DMR from arbitrary address
-    /// Note: ERC20 interface
-    function transferFrom(address sender, address recipient, uint amount)
-        is_later_than(endTime)
-    {
-        return super.transferFrom(sender, recipient, amount);
-    }*/
+  function stopBatchAssign() onlyOwner {
+      require ( batchAssignStopped == false);
+      batchAssignStopped = true;
+  }
 
-    // ASSIGN TOKENS --------------------------------------------------------
-    bool public batchAssignStopped;
-    // The 160 LSB is the address of the balance
-    // The 96 MSB is the balance of that address.
-    function batchAssignTokens(uint[] data) {
-        if ((msg.sender != owner)||(batchAssignStopped))
-            throw;
+/*
+  function getAddressBalance(address addr) constant returns (uint256 balance)  {
+      balance = balances[addr];
+  }
 
-        for (uint i=0; i<data.length; i++) {
-            address toaddress = address( data[i] & (D160-1) );
-            uint amount = data[i] / D160;
-            if (balances[toaddress] == 0) {   // In case it's filled two times, it only increments once
-                transferFrom(msg.sender, toaddress, amount);
-            }
-        }
-    }
+  function getAddressAndBalance(address addr) constant returns (address addr2, uint256 balance)  {
+      addr2 = addr;
+      balance = balances[addr];
+  }
+*/
 
-    function batchAssignTokens2Arrays(address[] vaddr, uint[]vamounts) {
+  function killContract() onlyOwner {
+      suicide(owner);
+  }
 
-        /*if ((msg.sender != owner)||(batchAssignStopped))
-            throw;
-        if (vaddr.length != vamounts.length)
-            throw;*/
+	function minimum( uint a, uint b) returns ( uint result) {
+		if ( a <= b ) {
+			result = a;
+		}
+		else {
+			result = b;
+		}
+	}
 
-        for (uint i=0; i<vaddr.length; i++) {
-            address toaddress = vaddr[i];
-            uint amount = vamounts[i];
-            if (balances[toaddress] == 0) {   // In case it's filled two times, it only increments once
-                balances[toaddress] = amount;
-                totalSupply += amount;
-            }
-            //transferFrom(msg.sender, toaddress, amount);
-        }
-    }
-
-    function stopBatchAssign() {
-        if ((msg.sender != owner)||(batchAssignStopped))
-            throw;    
-        batchAssignStopped= true;
-    }  
-
-    function testSplitUintWriteInTmp (uint data)  {
-        //databis = address(data);
-        uint uia = data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;       
-        address toaddress = address(uia);
-        addressmaptmp[0]=toaddress;
-        //toaddress = address( data & (D160-1) );
-        //toaddress = address( data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF );
-        //toaddress = address( data % 2 ** 160 );
-        amountsmaptmp[0] = data / D160;
-    }
-
-
-    function testSplitUint(uint256 data) constant returns (address databis, uint256 uia, address toaddress, uint256 amount)  {
-        databis = address(data);
-        uia = data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;       
-        toaddress = address(uia);
-        //toaddress = address( data & (D160-1) );
-        //toaddress = address( data & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF );
-        //toaddress = address( data % 2 ** 160 );
-        amount = data / D160;
-    }
-
-    function getAddressBalance(address addr) constant returns (uint256 balance)  {
-        balance = balances[addr];
-    }
-
-    function getAddressAndBalance(address addr) constant returns (address addr2, uint256 balance)  {
-        addr2 = addr;
-        balance = balances[addr];
-    }
-
-    // ----------------------------------------------------------------------
-
-    function killContract() onlyOwner {
-        suicide(domraiderOwner);
-    }
-
-
+	/*
+  modifier max_num_token_not_reached(uint amount) {
+        assert(safeAdd(totalSupply, amount) <= MAX_SUPPLY_NBTOKEN);
+        _;
+  }
+	*/
 
 }
