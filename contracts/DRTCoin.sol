@@ -15,7 +15,7 @@ contract DRTCoin is StandardToken, Ownable {
 	/* Overriding some ERC20 variables */
 	string public name      = "DomRaider Coin";
 	string public symbol    = "DRT";
-	uint256 public decimals = 18; //to be confirmed
+	uint256 public decimals = 8;
 	/* DRT specific variables */
 	// Max amount of tokens minted - Exact value inputed avec strech goals and before deploying contract
 	uint256 public constant MAX_SUPPLY_NBTOKEN    = 1000000000 * 10 ** decimals;
@@ -59,12 +59,13 @@ contract DRTCoin is StandardToken, Ownable {
 			//Looping into input arrays to assign target amount to each given address
       for (uint index=0; index<_vaddr.length; index++) {
           address toAddress = _vaddr[index];
-          uint amount = _vamounts[index];
+          uint amount = _vamounts[index] * 10 ** decimals;	
+	  bool isIced = _vIcedBalance[index];
           if (balances[toAddress] == 0) {
 						// In case it's filled two times, it only increments once
 						// Assigns the balance
 						assignedSupply += amount ;
-						if (  _vIcedBalance[index] == false ) {
+						if (  isIced  == false ) {
 							// Normal account
 							balances[toAddress] = amount;
 							// TODO allowance ??
@@ -72,9 +73,10 @@ contract DRTCoin is StandardToken, Ownable {
 						else {
 							// Iced account. The balance is not affected here
 							icedBalances.push(toAddress) ;
-							balances[toAddress]               = amount * DEFROST_INITIAL_PERCENT / 100;
-							icedBalances_frosted[toAddress]   = amount * (100 - DEFROST_INITIAL_PERCENT) / 100;
-							icedBalances_defrosted[toAddress] = amount * DEFROST_INITIAL_PERCENT / 100;
+							uint256 amount2assign 		  = amount * DEFROST_INITIAL_PERCENT / 100;
+							balances[toAddress]               = amount2assign;	
+							icedBalances_defrosted[toAddress] = amount2assign;
+							icedBalances_frosted[toAddress]   = amount - amount2assign;
 						}
 					}
 			}
@@ -113,14 +115,19 @@ contract DRTCoin is StandardToken, Ownable {
       	balance = balances[addr];
   }
 
+  function getAddressAndBalance(address addr) constant returns (address _address, uint256 _amount)  {
+	_address = addr;
+      	_amount = balances[addr];
+  }
+
   function getIcedAddresses() constant returns (address[] vaddr)  {
       	vaddr = icedBalances;
   }
 
   function getIcedInfos(address addr) constant returns (uint256 balance, uint256 frosted, uint256 defrosted)  {
-      	balance = icedBalances_frosted[addr];
-		frosted = icedBalances_defrosted[addr];
-		defrosted = balances[addr];
+      	frosted = icedBalances_frosted[addr];
+	defrosted = icedBalances_defrosted[addr];
+	balance = balances[addr];
   }
 
   function killContract() onlyOwner {

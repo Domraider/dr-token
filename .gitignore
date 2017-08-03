@@ -3,5 +3,6 @@ node_modules
 yarn-error.log
 OUTPUTS/generated_input_accounts_amounts.txt
 OUTPUTS/generated_number_of_tokens.txt
+OUTPUTS/smart-contract-address.txt
 OUTPUTS
 PARAMS

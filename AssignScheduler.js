@@ -107,7 +107,7 @@ function timerAssignFunction() {
                 if(vv.length == 3){
                     vaddr.push(vv[0]);
                     vamounts.push(parseInt(vv[1]));
-                    viced.push(vv[2]);
+                    viced.push(parseInt(vv[2])===0);
                     numToSend++;
                 }/*else{
                     console.log('Fatal error in data format')

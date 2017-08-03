@@ -40,14 +40,16 @@ drtCcontract.getAddressBalance(web3.eth.accounts[0], function(error, result){
 });
 console.log('')
 
-var vaddr = []
-var vamounts = []
+//var vaddr = []
+//var vamounts = []
+//var viced = []
 var lines = require('fs').readFileSync(ACCOUNTSAMOUNTS_FILEPATH, 'utf-8')
     .split('\n');
 
     
 
-var dict = []; // create an empty array
+var dict = [];
+var dictIced = [];
 
 var vmatchOK = []
 var vmatchErr = []
@@ -55,22 +57,29 @@ var totalAssigned = parseInt(0)
 
 for (var i=0; i<lines.length; i++) {
   var vv = lines[i].split(",");
-  if(vv.length == 2){   
+  if(vv.length == 3){   
     var userAddress = vv[0];
     var userAmount = parseInt(vv[1]);
-    dict[userAddress] = userAmount;
-    drtCcontract.getAddressAndBalance(userAddress, function(error, result){
+    var isIced = parseInt(vv[2]) == 0;
+
+//console.log(userAddress  + "isIced = " + isIced )
+
+    if(isIced == false){
+        dict[userAddress] = userAmount;
+        drtCcontract.getAddressAndBalance(userAddress, function(error, result){
             if (!error) {
+
                 retAddress = result[0];
                 retAmount = parseInt(result[1]);
-                console.log("getAddressBalance called : " + retAmount + " tokens found for " + retAddress + " ----"); 
 
-                if( retAmount === parseInt(dict[retAddress]) ){
+                console.log("getAddressBalance called : " + retAmount + " tokens found for " + userAddress+ " ----  good = " + parseInt(dict[retAddress])); 
+
+                if( retAmount === parseInt(dict[retAddress ]) ){
                     totalAssigned +=retAmount
                     var strOk = retAddress + "  -  AMOUNT MATCHING OK = " + retAmount + " ->  numTokensAssigned = " + totalAssigned;                    
                     vmatchOK.push(strOk)
                 }else{
-                    var strErr = "!!!!  ERROR ERROR ERROR ERROR ERROR:  " + retAddress + "  -  amount MISMATCH ERROR = " + retAmount;
+                    var strErr = "!!!!  INVESTOR INVESTOR ERROR ERROR ERROR:  " + retAddress + "  -  amount MISMATCH ERROR = " + retAmount;
                     console.log(strErr)
                     vmatchErr.push(strErr)
                 }
@@ -78,6 +87,31 @@ for (var i=0; i<lines.length; i++) {
                 console.log(error);
             }
         });
+    } 
+    else
+    {
+        /*dictIced[userAddress] = userAmount;
+        drtCcontract.getIcedInfos(userAddress, function(error, result){
+            if (!error) {
+                balance = parseInt(result[0]);
+                frosted = parseInt(result[1]);
+                defrosted = parseInt(result[2]);
+                console.log("getIcedInfos called balance: " + balance + ", frosted: " + frosted + ", defrosted: " + defrosted); 
+                if( balance === parseInt(dictIced[userAddress]) ){
+                    totalAssigned +=retAmount
+                    var strOk = userAddress+ "  -  AMOUNT MATCHING OK = " + retAmount + " ->  numTokensAssigned = " + totalAssigned;                    
+                    vmatchOK.push(strOk)
+                }else{
+                    var strErr = "!!!!  ICED ICED ERROR ERROR ERROR:  " + userAddress+ "  -  amount MISMATCH ERROR = " + balance;
+                    console.log(strErr)
+                    vmatchErr.push(strErr)
+                }
+            } else {
+                console.log(error);
+            }
+        });*/
+    }
+   
   }
 }
 
@@ -100,7 +134,7 @@ var waitTimerID = setInterval(function() {
             console.log('END -----------------------------------------------')
             clearInterval(waitTimerID)
         }else{
-            console.log('check in progress please wait...  ');
+            console.log('check in progress please wait... => ' + totalAssigned + ' of '+ sentNumberOfToken);
         }        
         cnt++;
 }, 2000);
