@@ -105,20 +105,23 @@ contract DRTCoin is StandardToken, Ownable {
 	}
 
   function stopBatchAssign() onlyOwner {
-      require ( batchAssignStopped == false);
-      batchAssignStopped = true;
+      	require ( batchAssignStopped == false);
+      	batchAssignStopped = true;
   }
 
-/*
   function getAddressBalance(address addr) constant returns (uint256 balance)  {
-      balance = balances[addr];
+      	balance = balances[addr];
   }
 
-  function getAddressAndBalance(address addr) constant returns (address addr2, uint256 balance)  {
-      addr2 = addr;
-      balance = balances[addr];
+  function getIcedAddresses() constant returns (address[] vaddr)  {
+      	vaddr = icedBalances;
   }
-*/
+
+  function getIcedInfos(address addr) constant returns (uint256 balance, uint256 frosted, uint256 defrosted)  {
+      	balance = icedBalances_frosted[addr];
+		frosted = icedBalances_defrosted[addr];
+		defrosted = balances[addr];
+  }
 
   function killContract() onlyOwner {
       suicide(owner);

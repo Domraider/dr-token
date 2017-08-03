@@ -90,6 +90,7 @@ function timerAssignFunction() {
         // fill address/amounts arrays
         var vaddr = []
         var vamounts = []
+        var viced = []
         for(i=from;i<to;i++){
 
             // check the end 
@@ -103,9 +104,10 @@ function timerAssignFunction() {
 
                 console.log('vAccounts[i] = ' + vAccounts[i] + '  - numToSend = ' + numToSend)
                 var vv = vAccounts[i].split(",");
-                if(vv.length == 2){
+                if(vv.length == 3){
                     vaddr.push(vv[0]);
                     vamounts.push(parseInt(vv[1]));
+                    viced.push(vv[2]);
                     numToSend++;
                 }/*else{
                     console.log('Fatal error in data format')
@@ -116,12 +118,12 @@ function timerAssignFunction() {
         }
 
         console.log('numToSend = ' + numToSend + '  - vaddr.length = '+vaddr.length + '  -  vamounts.length = '+  vamounts.length);
-        if(numToSend === vaddr.length && numToSend === vamounts.length)
+        if(numToSend === vaddr.length && numToSend === vamounts.length && numToSend == viced.length)
         {
               console.log('calling timerAssignFunction ....... ');
              
               var numSent = SendAssignFileToSmartContract(objAssignParams.contractaddress,objAssignParams.accountpwd,
-                                                      vaddr, vamounts, numToSend);
+                                                      vaddr, vamounts, viced, numToSend);
               console.log("...END -> cntTimer = " + cntTimer)
         }
         else{
@@ -133,10 +135,9 @@ function timerAssignFunction() {
 }
 
 
-function SendAssignFileToSmartContract(contractAddress, accountPwd, vaddr, vamounts, numToSend) {
+function SendAssignFileToSmartContract(contractAddress, accountPwd, vaddr, vamounts, viced, numToSend) {
 
-
-    dataparam = drtCcontract.batchAssignTokens2Arrays.getData(vaddr, vamounts )
+    dataparam = drtCcontract.batchAssignTokens.getData(vaddr, vamounts, viced)
     //console.log("dataparam = " + dataparam );
     var estimatedGas = web3.eth.estimateGas({data: dataparam})
     console.log("estimate = " + estimatedGas );
@@ -152,16 +153,13 @@ function SendAssignFileToSmartContract(contractAddress, accountPwd, vaddr, vamou
     }
     console.log("gasOk = " + gasOk );
 
-
-    drtCcontract.batchAssignTokens2Arrays(vaddr, vamounts, { gas: gasOk },  function(error, result){
+    drtCcontract.batchAssignTokens(vaddr, vamounts, viced, { gas: gasOk },  function(error, result){
             if (!error) {
                 console.log("batchAssignTokens2Arrays OK:" + result);  // OK
             } else {
                 console.log("Error: " + error); 
             }
     });
-
-    
 }
 
 
