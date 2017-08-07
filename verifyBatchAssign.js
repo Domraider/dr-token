@@ -54,12 +54,13 @@ var dictIced = [];
 var vmatchOK = []
 var vmatchErr = []
 var totalAssigned = parseInt(0)
+var multDecimals = 100000000
 
 for (var i=0; i<lines.length; i++) {
   var vv = lines[i].split(",");
   if(vv.length == 3){   
     var userAddress = vv[0];
-    var userAmount = parseInt(vv[1]);
+    var userAmount = parseInt(vv[1])* multDecimals; // decimals = 8
     var isIced = parseInt(vv[2]) == 0;
 
 //console.log(userAddress  + "isIced = " + isIced )
@@ -74,7 +75,7 @@ for (var i=0; i<lines.length; i++) {
 
                 console.log("getAddressBalance called : " + retAmount + " tokens found for " + userAddress+ " ----  good = " + parseInt(dict[retAddress])); 
 
-                if( retAmount === parseInt(dict[retAddress ]) ){
+                if( retAmount === parseInt(dict[retAddress]) ){
                     totalAssigned +=retAmount
                     var strOk = retAddress + "  -  AMOUNT MATCHING OK = " + retAmount + " ->  numTokensAssigned = " + totalAssigned;                    
                     vmatchOK.push(strOk)
@@ -90,26 +91,31 @@ for (var i=0; i<lines.length; i++) {
     } 
     else
     {
-        /*dictIced[userAddress] = userAmount;
+        dictIced[userAddress] = userAmount;
         drtCcontract.getIcedInfos(userAddress, function(error, result){
             if (!error) {
-                balance = parseInt(result[0]);
-                frosted = parseInt(result[1]);
-                defrosted = parseInt(result[2]);
-                console.log("getIcedInfos called balance: " + balance + ", frosted: " + frosted + ", defrosted: " + defrosted); 
-                if( balance === parseInt(dictIced[userAddress]) ){
-                    totalAssigned +=retAmount
-                    var strOk = userAddress+ "  -  AMOUNT MATCHING OK = " + retAmount + " ->  numTokensAssigned = " + totalAssigned;                    
+                icedAddr = result[0];
+		balance = parseInt(result[1]);
+                frosted = parseInt(result[2]);
+                defrosted = parseInt(result[3]);
+		balanceAttendue = parseInt(dictIced[icedAddr]) * 20 / 100
+
+		//console.log("dictIced[icedAddr] = " + parseInt(dictIced[icedAddr]))
+                console.log("getIcedInfos called => balanceAttendue: " + balanceAttendue + " - balance: " + balance + ", frosted: " + frosted + ", defrosted: " + defrosted); 
+		
+                if( balance === balanceAttendue ){
+                    totalAssigned +=((frosted + defrosted)*multDecimals)
+                    var strOk = icedAddr + "  -  AMOUNT MATCHING OK = " + balance + " ->  numTokensAssigned = " + totalAssigned;                    
                     vmatchOK.push(strOk)
                 }else{
-                    var strErr = "!!!!  ICED ICED ERROR ERROR ERROR:  " + userAddress+ "  -  amount MISMATCH ERROR = " + balance;
+                    var strErr = "!!!!  ICED ICED ERROR ERROR ERROR:  " + userAddress+ "  - amount MISMATCH ERROR = " + balance + " attendue = " + balanceAttendue;
                     console.log(strErr)
                     vmatchErr.push(strErr)
                 }
             } else {
                 console.log(error);
             }
-        });*/
+        });
     }
    
   }
@@ -117,6 +123,7 @@ for (var i=0; i<lines.length; i++) {
 
 const NUMTOKENSENT_FILEPATH = path.resolve(__dirname) + '/OUTPUTS/generated_number_of_tokens.txt'
 var sentNumberOfToken = parseInt(require('fs').readFileSync(NUMTOKENSENT_FILEPATH, 'utf-8'))
+sentNumberOfToken = sentNumberOfToken * multDecimals;
 
 var cnt=0
 var waitTimerID = setInterval(function() {
