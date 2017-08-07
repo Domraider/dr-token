@@ -23,13 +23,19 @@ contract DRTCoin is StandardToken, Ownable {
 	// uint256 public constant START_ICO_TIMESTAMP   = 1501595111;
 	uint256 public START_ICO_TIMESTAMP   = 1501595111; // not constant for testing (overwritten in the constructor)
 	uint public constant DEFROST_PERIOD           = 6; // month in minutes  (1month = 43200 min)
+	uint public constant DEFROST_MONTHLY_PERCENT_OWNER  = 5 ; // 5% per month is automaticaly defrosted
+	uint public constant DEFROST_INITIAL_PERCENT_OWNER  = 10 ; // 90% locked
 	uint public constant DEFROST_MONTHLY_PERCENT  = 10 ; // 10% per month is automaticaly defrosted
 	uint public constant DEFROST_INITIAL_PERCENT  = 20 ; // 80% locked
+
 	// Fields that can be changed by functions
 	address[] icedBalances ;
   // mapping (address => bool) icedBalances; //Initial implementation as a mapping
 	mapping (address => uint256) icedBalances_frosted;
 	mapping (address => uint256) icedBalances_defrosted;
+	uint256 ownerFrosted;
+	uint256 ownerDefrosted;
+
 	// Variable usefull for verifying that the assignedSupply matches that totalSupply
 	uint256 public assignedSupply;
 	//Boolean to allow or not the initial assignement of token (batch)
@@ -39,13 +45,18 @@ contract DRTCoin is StandardToken, Ownable {
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
 	function DRTCoin() {
-      owner                = msg.sender;
-      balances[owner]      = MAX_SUPPLY_NBTOKEN / 2;
-			totalSupply          = MAX_SUPPLY_NBTOKEN;
-			assignedSupply       = MAX_SUPPLY_NBTOKEN / 2;
-			// for test only: set START_ICO to contract creation timestamp
-			// +600 => add 10 minutes (so defrost start 10 min later, too)
-			START_ICO_TIMESTAMP = now + 600;            
+      		owner                = msg.sender;
+      		uint256 amount       = MAX_SUPPLY_NBTOKEN / 2;
+      		uint256 amount2assign = amount * DEFROST_INITIAL_PERCENT_OWNER / 100;
+      		balances[owner]  = amount2assign;	
+      		ownerDefrosted = amount2assign;
+      		ownerFrosted   = amount - amount2assign;
+
+		totalSupply          = MAX_SUPPLY_NBTOKEN;
+		assignedSupply       = MAX_SUPPLY_NBTOKEN / 2;
+		// for test only: set START_ICO to contract creation timestamp
+		// +600 => add 10 minutes (so defrost start 10 min later, too)
+		START_ICO_TIMESTAMP = now + 600;            
 	}
 
   function assignToken(address recipient, uint amount, bool isIced) onlyOwner {
@@ -97,10 +108,10 @@ contract DRTCoin is StandardToken, Ownable {
 
 
 	/**
-   * @dev Defrost token (for advisors)
+   	* @dev Defrost token (for advisors)
 	 Method called by the owner once per defrost period (1 month)
-   */
-  function defrostToken() onlyOwner {
+   	*/
+  	function defrostToken() onlyOwner {
 
 		if(now<START_ICO_TIMESTAMP){
 			return;
@@ -120,6 +131,23 @@ contract DRTCoin is StandardToken, Ownable {
 			}
 		}
 	}
+
+ 	function defrostOwner() onlyOwner {
+
+		if(now<START_ICO_TIMESTAMP){
+			return;
+		}
+
+		uint256 amountTotal     = ownerFrosted + ownerDefrosted;
+		uint256 targetDeFrosted = (minimum(100,DEFROST_INITIAL_PERCENT_OWNER + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT_OWNER)) * amountTotal / 100;
+		uint256 amountToRelease = targetDeFrosted - ownerDefrosted;
+		if ( amountToRelease > 0 ) {
+			ownerFrosted   = ownerFrosted - amountToRelease;
+			ownerDefrosted = ownerDefrosted + amountToRelease;
+			balances[owner]               = balances[owner] + amountToRelease;
+		}
+	}
+
 
 	function elapedMonthsFromICOStart() constant returns (uint elapsed) {
 		elapsed = ((now-START_ICO_TIMESTAMP)/60)/DEFROST_PERIOD ;
@@ -149,6 +177,14 @@ contract DRTCoin is StandardToken, Ownable {
 	frosted = icedBalances_frosted[addr];
 	defrosted = icedBalances_defrosted[addr];
   }
+
+  function getOwnerInfos() constant returns (address owneraddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
+    	owneraddr= owner;
+	balance = balances[owneraddr];
+	frosted = ownerFrosted;
+	defrosted = ownerDefrosted;
+  }
+
 
   function killContract() onlyOwner {
       suicide(owner);

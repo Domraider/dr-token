@@ -86,40 +86,55 @@ function timerDefrostFunction() {
         console.log('.......................................................................')
 }
 
+function estimateGas(dataparam){
+
+	var estimatedGas = web3.eth.estimateGas({data: dataparam})
+    	gasLimit = web3.eth.getBlock("latest").gasLimit
+	gasOk=0 
+    	if(estimatedGas  < gasLimit){
+      		gasOk=estimatedGas;
+    	}else{
+      		gasOk=gasLimit;
+    	}
+	return gasOk;
+}
 
 function tryDefrostAdvisors() {
 
     	var bCanDefrost  = drtCcontract.canDefrost();
 	console.log("=======>   bCanDefrost = " + bCanDefrost);
                     if(bCanDefrost === true){
-
-			
+	
+			// ADVISORS -------------------------------------
     			dataparam = drtCcontract.defrostToken.getData()
-    			//console.log("dataparam = " + dataparam );
-    			var estimatedGas = web3.eth.estimateGas({data: dataparam})
-    			console.log("estimate = " + estimatedGas );
-
-    			gasLimit = web3.eth.getBlock("latest").gasLimit
-    			console.log("gasLimit = " + gasLimit);
-
-			gasOk=0 
-    			if(estimatedGas  < gasLimit){
-      				gasOk=estimatedGas;
-    			}else{
-      				gasOk=gasLimit;
-    			}
-    			console.log("gasOk = " + gasOk );
+			var gasOk = estimateGas(dataparam);   			
 
     			drtCcontract.defrostToken( { gas: gasOk },  function(error, result){
             			if (!error) {
                 			console.log("defrostToken OK:" + result);  // OK
 
-                			waitForBlock(result);
+                			waitForBlock(result, false);
 
             			} else {
                 			console.log("Error: calling defrostToken => " + error); 
             			}
     		        });
+
+			// OWNER -------------------------------------
+			dataparamOwner = drtCcontract.defrostOwner.getData()
+    			var gasOkOwner = estimateGas(dataparamOwner ); 
+
+    			drtCcontract.defrostOwner( { gas: gasOkOwner },  function(error, result){
+            			if (!error) {
+                			console.log("defrostOwnerOK:" + result);  // OK
+
+                			waitForBlock(result, true);
+
+            			} else {
+                			console.log("Error: calling defrostToken => " + error); 
+            			}
+    		        });
+
 		   }                        
 }
 
@@ -130,27 +145,57 @@ function mySleep(ms) {
 
 // We need to wait until any miner has included the transaction
 // in a block to get the address of the contract
-async function waitForBlock(txhash) {
+async function waitForBlock(txhash, isOwner) {
   while (true) {
     let receipt = web3.eth.getTransactionReceipt(txhash);
     if (receipt && receipt.blockNumber) {
-      console.log("Your defrostToken call has been mined in block " + receipt.blockNumber);
-      console.log("Note that it might take 30 - 90 seconds for the block to propagate before it's visible in etherscan.io");
+      //console.log("Your defrostToken call has been mined in block " + receipt.blockNumber);
+      //console.log("Note that it might take 30 - 90 seconds for the block to propagate before it's visible in etherscan.io");
 
-      checkDefrostedAdvisors();
-
-      break;
+	if(isOwner)
+	{
+		checkDefrostedOwner();
+	}
+	else
+	{
+      		checkDefrostedAdvisors();
+	}
+      	break;
     }
-    console.log("Waiting a mined block including your defrostToken call ... currently in block " + web3.eth.blockNumber);
-    await mySleep(5000);
+    //console.log("Waiting a mined block including your defrostToken call ... currently in block " + web3.eth.blockNumber);
+    await mySleep(10000);
   }
 }
 
 
+function checkDefrostedOwner() {
+
+	var blockTimestamp = drtCcontract.getBlockTimestamp();
+    	var defrostedLogFileOwner = DEFROSTED_LOG_ROOT + 'defrosted_' + blockTimestamp +'_OWNER' + '.txt'
+    	fs.appendFileSync(defrostedLogFileOwner, blockTimestamp + '\n');
+
+	drtCcontract.getOwnerInfos(function(error, result){
+                if (!error)
+                {
+		    owneraddr = result[0];
+                    balance = parseInt(result[1]);
+                    frosted = parseInt(result[2]);
+                    defrosted = parseInt(result[3]);
+                    console.log('OWNER ====> ' + owneraddr + " => bal: " + balance + " - frosted: " + frosted + " - defrosted: " + defrosted);     
+		    var strlog = owneraddr + ";balance=" + balance + ";frosted=" + frosted + ";defrosted=" + defrosted;
+		    fs.appendFileSync(defrostedLogFileOwner , strlog + '\n');
+                }
+                else
+                {
+                    console.log("Error: calling getIcedInfos => " + error); 
+                }
+            })
+}
+
 function checkDefrostedAdvisors() {
     
     var blockTimestamp = drtCcontract.getBlockTimestamp();
-    var defrostedLogFile = DEFROSTED_LOG_ROOT + 'defrosted_' + blockTimestamp +'_' + cntTimer   + '.txt'
+    var defrostedLogFile = DEFROSTED_LOG_ROOT + 'defrosted_' + blockTimestamp + '.txt'
     fs.appendFileSync(defrostedLogFile, blockTimestamp + '\n');
 
     for(i=0;i<vAccounts.length;i++){
@@ -164,7 +209,7 @@ function checkDefrostedAdvisors() {
                     balance = parseInt(result[1]);
                     frosted = parseInt(result[2]);
                     defrosted = parseInt(result[3]);
-                    console.log(icedaddr + " => bal: " + balance + " - frosted: " + frosted + " - defrosted: " + defrosted);     
+                    console.log('ADVISOR => ' + icedaddr + " => bal: " + balance + " - frosted: " + frosted + " - defrosted: " + defrosted);     
 		    var strlog = icedaddr + ";balance=" + balance + ";frosted=" + frosted + ";defrosted=" + defrosted;
 		    fs.appendFileSync(defrostedLogFile, strlog + '\n');
                 }
