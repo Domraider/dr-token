@@ -1,6 +1,5 @@
 pragma solidity ^0.4.11;
 
-import "./ConvertLib.sol";
 import "./StandardToken.sol";
 import "./Ownable.sol";
 import "./SafeMath.sol";
@@ -13,9 +12,9 @@ import "./SafeMath.sol";
 contract DRTCoin is StandardToken, Ownable {
 
 	/* Overriding some ERC20 variables */
-	string public name      = "DomRaider Coin";
-	string public symbol    = "DRT";
-	uint256 public decimals = 8;
+	string public constant name      = "DomRaider Coin";
+	string public constant symbol    = "DRT";
+	uint256 public constant decimals = 8;
 	/* DRT specific variables */
 	// Max amount of tokens minted - Exact value inputed avec strech goals and before deploying contract
 	uint256 public constant MAX_SUPPLY_NBTOKEN    = 1000000000 * 10 ** decimals;
@@ -39,29 +38,25 @@ contract DRTCoin is StandardToken, Ownable {
 	// Variable usefull for verifying that the assignedSupply matches that totalSupply
 	uint256 public assignedSupply;
 	//Boolean to allow or not the initial assignement of token (batch)
-	bool public batchAssignStopped;
+	bool public batchAssignStopped = false;
 
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
 	*/
 	function DRTCoin() {
-      		owner                = msg.sender;
-      		uint256 amount       = MAX_SUPPLY_NBTOKEN / 2;
-      		uint256 amount2assign = amount * DEFROST_INITIAL_PERCENT_OWNER / 100;
-      		balances[owner]  = amount2assign;	
-      		ownerDefrosted = amount2assign;
-      		ownerFrosted   = amount - amount2assign;
+		owner                = msg.sender;
+		uint256 amount       = MAX_SUPPLY_NBTOKEN / 2;
+		uint256 amount2assign = amount * DEFROST_INITIAL_PERCENT_OWNER / 100;
+		balances[owner]  = amount2assign;
+		ownerDefrosted = amount2assign;
+		ownerFrosted   = amount - amount2assign;
 
 		totalSupply          = MAX_SUPPLY_NBTOKEN;
 		assignedSupply       = MAX_SUPPLY_NBTOKEN / 2;
 		// for test only: set START_ICO to contract creation timestamp
 		// +600 => add 10 minutes (so defrost start 10 min later, too)
-		START_ICO_TIMESTAMP = now + 600;            
+		START_ICO_TIMESTAMP = now + 600;
 	}
-
-  function assignToken(address recipient, uint amount, bool isIced) onlyOwner {
-			// for testing purpose
-  }
 
 	/**
    * @dev Transfer tokens in batches (of adresses)
@@ -74,7 +69,7 @@ contract DRTCoin is StandardToken, Ownable {
 			//Looping into input arrays to assign target amount to each given address
       for (uint index=0; index<_vaddr.length; index++) {
           address toAddress = _vaddr[index];
-          uint amount = _vamounts[index] * 10 ** decimals;	
+          uint amount = _vamounts[index] * 10 ** decimals;
 	  bool isIced = _vIcedBalance[index];
           if (balances[toAddress] == 0) {
 						// In case it's filled two times, it only increments once
@@ -89,7 +84,7 @@ contract DRTCoin is StandardToken, Ownable {
 							// Iced account. The balance is not affected here
 							icedBalances.push(toAddress) ;
 							uint256 amount2assign 		  = amount * DEFROST_INITIAL_PERCENT / 100;
-							balances[toAddress]               = amount2assign;	
+							balances[toAddress]               = amount2assign;
 							icedBalances_defrosted[toAddress] = amount2assign;
 							icedBalances_frosted[toAddress]   = amount - amount2assign;
 						}
@@ -111,18 +106,15 @@ contract DRTCoin is StandardToken, Ownable {
    	* @dev Defrost token (for advisors)
 	 Method called by the owner once per defrost period (1 month)
    	*/
-  	function defrostToken() onlyOwner {
+	function defrostToken() onlyOwner {
 
-		if(now<START_ICO_TIMESTAMP){
-			return;
-		}
-
+		require(now > START_ICO_TIMESTAMP) ;
 		// Looping into the iced accounts
 		for (uint index=0; index<icedBalances.length; index++) {
 			address currentAddress  = icedBalances[index];
 			uint256 amountTotal     = icedBalances_frosted[currentAddress]+ icedBalances_defrosted[currentAddress];
 			//uint256 amountToRelease = amountTotal * DEFROST_MONTHLY_PERCENT / 100;
-			uint256 targetDeFrosted = (minimum(100,DEFROST_INITIAL_PERCENT + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT)) * amountTotal / 100;
+			uint256 targetDeFrosted = (SafeMath.minimum(100,DEFROST_INITIAL_PERCENT + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT)) * amountTotal / 100;
 			uint256 amountToRelease = targetDeFrosted - icedBalances_defrosted[currentAddress];
 			if ( amountToRelease > 0 ) {
 				icedBalances_frosted[currentAddress]   = icedBalances_frosted[currentAddress] - amountToRelease;
@@ -130,16 +122,16 @@ contract DRTCoin is StandardToken, Ownable {
 				balances[currentAddress]               = balances[currentAddress] + amountToRelease;
 			}
 		}
+
 	}
 
  	function defrostOwner() onlyOwner {
-
 		if(now<START_ICO_TIMESTAMP){
 			return;
 		}
 
 		uint256 amountTotal     = ownerFrosted + ownerDefrosted;
-		uint256 targetDeFrosted = (minimum(100,DEFROST_INITIAL_PERCENT_OWNER + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT_OWNER)) * amountTotal / 100;
+		uint256 targetDeFrosted = (SafeMath.minimum(100,DEFROST_INITIAL_PERCENT_OWNER + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT_OWNER)) * amountTotal / 100;
 		uint256 amountToRelease = targetDeFrosted - ownerDefrosted;
 		if ( amountToRelease > 0 ) {
 			ownerFrosted   = ownerFrosted - amountToRelease;
@@ -189,15 +181,6 @@ contract DRTCoin is StandardToken, Ownable {
   function killContract() onlyOwner {
       suicide(owner);
   }
-
-	function minimum( uint a, uint b) returns ( uint result) {
-		if ( a <= b ) {
-			result = a;
-		}
-		else {
-			result = b;
-		}
-	}
 
 	/*
   modifier max_num_token_not_reached(uint amount) {

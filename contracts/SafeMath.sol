@@ -29,4 +29,14 @@ library SafeMath {
     assert(c >= a);
     return c;
   }
+
+  function minimum( uint a, uint b) returns ( uint result) {
+    if ( a <= b ) {
+      result = a;
+    }
+    else {
+      result = b;
+    }
+  }
+
 }

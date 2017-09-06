@@ -30,8 +30,14 @@
     "json-loader": "^0.5.4",
     "style-loader": "^0.13.1",
     "truffle-contract": "^1.1.6",
-    "web3": "^0.18.2",
+    "web3": "^0.18.4",
     "webpack": "^2.2.1",
     "webpack-dev-server": "^2.3.0"
+  },
+  "dependencies": {
+    "babel": "^6.23.0",
+    "ethereumjs-keys": "0.0.3",
+    "truffle-compile": "^2.0.7",
+    "truffle-contract-schema": "0.0.5"
   }
 }
