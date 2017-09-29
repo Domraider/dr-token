@@ -28,12 +28,14 @@ contract DRTCoin is StandardToken, Ownable {
 	uint public constant DEFROST_INITIAL_PERCENT  = 20 ; // 80% locked
 
 	// Fields that can be changed by functions
-	address[] icedBalances ;
-  // mapping (address => bool) icedBalances; //Initial implementation as a mapping
+	address[] icedBalances;
+    // mapping (address => bool) icedBalances; //Initial implementation as a mapping
 	mapping (address => uint256) icedBalances_frosted;
 	mapping (address => uint256) icedBalances_defrosted;
 	uint256 ownerFrosted;
 	uint256 ownerDefrosted;
+
+	mapping (address => bool) robotAddress;
 
 	// Variable usefull for verifying that the assignedSupply matches that totalSupply
 	uint256 public assignedSupply;
@@ -92,15 +94,23 @@ contract DRTCoin is StandardToken, Ownable {
 			}
 	}
 
-  function canDefrost() onlyOwner constant returns (bool bCanDefrost){
+	function canDefrost() onlyOwner constant returns (bool bCanDefrost){
 		bCanDefrost = now > START_ICO_TIMESTAMP;
-  }
+	}
 
 
-  function getBlockTimestamp() constant returns (uint256){
-        return now;
-  }
+	function getBlockTimestamp() constant returns (uint256){
+		return now;
+	}
 
+	function addRobot(address robot) {
+		robotAddress[robot] = true;
+	}
+
+	function deleteRobot(address robot) {
+		require(robotAddress[robot] == true);
+		delete robotAddress[robot];
+	}
 
 	/**
    	* @dev Defrost token (for advisors)

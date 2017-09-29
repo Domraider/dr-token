@@ -30,7 +30,7 @@ library SafeMath {
     return c;
   }
 
-  function minimum( uint a, uint b) returns ( uint result) {
+  function minimum( uint a, uint b) internal returns ( uint result) {
     if ( a <= b ) {
       result = a;
     }
