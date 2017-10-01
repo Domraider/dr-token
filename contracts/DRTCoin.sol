@@ -154,8 +154,8 @@ contract DRTCoin is StandardToken, Ownable {
 	/**
    	* @dev Defrost token (for advisors)
 	 Method called by the owner once per defrost period (1 month)
-   	*/
-	function defrostToken() onlyOwner {
+	*/
+	function defrostToken()  {
 
 		require(now > START_ICO_TIMESTAMP) ;
 		// Looping into the iced accounts
@@ -174,7 +174,7 @@ contract DRTCoin is StandardToken, Ownable {
 
 	}
 
- 	function defrostOwner() onlyOwner {
+ 	function defrostOwner() {
 		if(now<START_ICO_TIMESTAMP){
 			return;
 		}
