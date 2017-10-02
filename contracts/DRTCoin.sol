@@ -36,22 +36,19 @@ contract DRTCoin is StandardToken, Ownable {
 	uint256 ownerDefrosted;
 
 	mapping (address => bool) robotAddress;
-
-	/*struct StructRobot {
-		uint256 amount;
-		address user;
-	}*/
 	mapping (address => mapping (address => uint) ) mapRobotAddressAmounts;
+	mapping (address => bool) userOnRobot;
 
 	// Variable usefull for verifying that the assignedSupply matches that totalSupply
 	uint256 public assignedSupply;
 	//Boolean to allow or not the initial assignement of token (batch)
 	bool public batchAssignStopped = false;
 
-	event LogRobotAdded(address indexed _robot);
-	event LogRobotDeleted(address indexed _robot);
-	event LogRobotTokensLock(address indexed _robot, uint _amount);
-	event LogRobotTokensUnlock(address indexed _robot, address _user, uint _amount);
+	event EventRobotAdded(address indexed _robot);
+	event EventRobotDeleted(address indexed _robot);
+	event EventUserLocksTokens(address indexed _robot, uint _amount);
+	event EventRobotTokensUnlock(address indexed _robot, address indexed _user, uint _amount);
+	event EventOwnerUnlockForce(address indexed _robot, address indexed _user, uint _amount);
 
 	/**
 	* @dev Contructor that gives msg.sender all of existing tokens.
@@ -105,28 +102,28 @@ contract DRTCoin is StandardToken, Ownable {
 			}
 	}
 
-	function canDefrost() onlyOwner constant returns (bool bCanDefrost) {
+	function canDefrost() constant returns (bool bCanDefrost) {
 		bCanDefrost = now > START_ICO_TIMESTAMP;
 	}
-
-
+	
 	function getBlockTimestamp() constant returns (uint256) {
 		return now;
 	}
 
+	// ROBOT ---------------------------------------------------------------------
 	function addRobot(address _robot) onlyOwner {
 		robotAddress[_robot] = true;
-		LogRobotAdded(_robot);
+		EventRobotAdded(_robot);
 	}
 
 	function deleteRobot(address _robot) onlyOwner {
 		require(robotAddress[_robot] == true);
 		require(balances[_robot] == 0);
 		delete robotAddress[_robot];
-		LogRobotDeleted(_robot);
+		EventRobotDeleted(_robot);
 	}
 
-	function robotExists(address _robot) onlyOwner returns (bool bExists) {
+	function robotExists(address _robot) constant onlyOwner returns (bool bExists) {
 		bExists = robotAddress[_robot]; // check
 	}
 
@@ -134,28 +131,57 @@ contract DRTCoin is StandardToken, Ownable {
 	function lockTokensToRobot(address _robot, uint _amount) {
 		require(robotAddress[_robot] == true);
 		require(balances[msg.sender] >= _amount);
+		require(msg.sender != _robot);
 		transfer(_robot, _amount);
-		mapRobotAddressAmounts[_robot][msg.sender] += _amount;
-		LogRobotTokensLock(_robot, _amount);
+		mapRobotAddressAmounts[_robot][msg.sender].add(_amount);
+		userOnRobot[msg.sender] = true;
+		EventUserLocksTokens(_robot, _amount);
 	}
 
 
-	// the owner unlocks user tokens 
-	function unlockTokensFromRobot(address _robot, address _user, uint _amount) {
+	// the robot unlocks user tokens 
+	function robotUnlockTokens(address _robot, address _user, uint _amount) {
+		require(_user != address(0));
 		require(robotAddress[_robot] == true);
-		require(msg.sender == _robot || msg.sender == owner);
+		require(msg.sender == _robot);
 		require(balances[_robot] >= _amount);
 		require(_amount <= mapRobotAddressAmounts[_robot][_user]);
-		transferFrom(_robot, msg.sender, _amount);
-		mapRobotAddressAmounts[_robot][_user] -= _amount;
-		LogRobotTokensUnlock(_robot, _user, _amount);
+		transfer(_user, _amount);
+		delete userOnRobot[_user];
+		mapRobotAddressAmounts[_robot][_user].sub(_amount);
+		EventRobotTokensUnlock(_robot, _user, _amount);
 	}
+
+	function ownerUnlockForce(address _robot, address _user, uint256 _amount) onlyOwner returns (bool) {
+		require(_user != address(0));
+
+		// SafeMath.sub will throw if there is not enough balance.
+		balances[_robot] = balances[_robot].sub(_amount);
+		balances[_user] = balances[_user].add(_amount);
+		delete userOnRobot[_user];
+		EventOwnerUnlockForce(_robot, _user, _amount);
+		return true;
+	}
+
+    function transfer(address _to, uint256 _value) returns (bool) {
+		require(_to != address(0));
+		if(robotAddress[msg.sender] == true) {
+			require(userOnRobot[_to] == true);
+			require(_value <= mapRobotAddressAmounts[msg.sender][_to]);
+		}
+		// SafeMath.sub will throw if there is not enough balance.
+		balances[msg.sender] = balances[msg.sender].sub(_value);
+		balances[_to] = balances[_to].add(_value);
+		Transfer(msg.sender, _to, _value);
+		return true;
+	}
+	// END ROBOT ---------------------------------------------------------------------
 
 	/**
    	* @dev Defrost token (for advisors)
 	 Method called by the owner once per defrost period (1 month)
 	*/
-	function defrostToken()  {
+	function defrostToken() {
 
 		require(now > START_ICO_TIMESTAMP) ;
 		// Looping into the iced accounts
@@ -214,23 +240,24 @@ contract DRTCoin is StandardToken, Ownable {
 
   function getIcedInfos(address addr) constant returns (address icedaddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
     	icedaddr = addr;
-	balance = balances[addr];
-	frosted = icedBalances_frosted[addr];
-	defrosted = icedBalances_defrosted[addr];
+		balance = balances[addr];
+		frosted = icedBalances_frosted[addr];
+		defrosted = icedBalances_defrosted[addr];
   }
 
   function getOwnerInfos() constant returns (address owneraddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
     	owneraddr= owner;
-	balance = balances[owneraddr];
-	frosted = ownerFrosted;
-	defrosted = ownerDefrosted;
+		balance = balances[owneraddr];
+		frosted = ownerFrosted;
+		defrosted = ownerDefrosted;
   }
 
 
   function killContract() onlyOwner {
-      suicide(owner);
+      	suicide(owner);
   }
 
+  
 	/*
   modifier max_num_token_not_reached(uint amount) {
         assert(safeAdd(totalSupply, amount) <= MAX_SUPPLY_NBTOKEN);
