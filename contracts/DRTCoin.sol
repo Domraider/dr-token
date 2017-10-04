@@ -12,7 +12,7 @@ import "./SafeMath.sol";
 contract DRTCoin is StandardToken, Ownable {
 
 	/* Overriding some ERC20 variables */
-	string public constant name      = "DomRaider Coin";
+	string public constant name      = "DomRaiderToken";
 	string public constant symbol    = "DRT";
 	uint256 public constant decimals = 8;
 	/* DRT specific variables */
