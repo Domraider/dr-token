@@ -4,15 +4,10 @@ import "./StandardToken.sol";
 import "./Ownable.sol";
 import "./SafeMath.sol";
 
-// This is just a simple example of a coin-like contract.
-// It is not standards compatible and cannot be expected to talk to other
-// coin/token contracts. If you want to create a standards-compliant
-// token, see: https://github.com/ConsenSys/Tokens. Cheers!
-
+/* DomRaiderToken Contract */
 contract DRTCoin is StandardToken, Ownable {
-
 	/* Overriding some ERC20 variables */
-	string public constant name      = "DomRaider Coin";
+	string public constant name      = "DomRaiderToken";
 	string public constant symbol    = "DRT";
 	uint256 public constant decimals = 8;
 	/* DRT specific variables */
@@ -29,7 +24,7 @@ contract DRTCoin is StandardToken, Ownable {
 
 	// Fields that can be changed by functions
 	address[] icedBalances ;
-  // mapping (address => bool) icedBalances; //Initial implementation as a mapping
+  	// mapping (address => bool) icedBalances; //Initial implementation as a mapping
 	mapping (address => uint256) icedBalances_frosted;
 	mapping (address => uint256) icedBalances_defrosted;
 	uint256 ownerFrosted;
@@ -59,55 +54,53 @@ contract DRTCoin is StandardToken, Ownable {
 	}
 
 	/**
-   * @dev Transfer tokens in batches (of adresses)
-   * @param _vaddr address The address which you want to send tokens from
-   * @param _vamounts address The address which you want to transfer to
-   */
-  function batchAssignTokens(address[] _vaddr, uint[] _vamounts, bool[] _vIcedBalance ) onlyOwner {
-			require ( batchAssignStopped == false );
-			require ( _vaddr.length == _vamounts.length );
-			//Looping into input arrays to assign target amount to each given address
-      for (uint index=0; index<_vaddr.length; index++) {
-          address toAddress = _vaddr[index];
-          uint amount = _vamounts[index] * 10 ** decimals;
-	  bool isIced = _vIcedBalance[index];
-          if (balances[toAddress] == 0) {
-						// In case it's filled two times, it only increments once
-						// Assigns the balance
-						assignedSupply += amount ;
-						if (  isIced  == false ) {
-							// Normal account
-							balances[toAddress] = amount;
-							// TODO allowance ??
-						}
-						else {
-							// Iced account. The balance is not affected here
-							icedBalances.push(toAddress) ;
-							uint256 amount2assign 		  = amount * DEFROST_INITIAL_PERCENT / 100;
-							balances[toAddress]               = amount2assign;
-							icedBalances_defrosted[toAddress] = amount2assign;
-							icedBalances_frosted[toAddress]   = amount - amount2assign;
-						}
-					}
+	* @dev Transfer tokens in batches (of adresses)
+	* @param _vaddr address The address which you want to send tokens from
+	* @param _vamounts address The address which you want to transfer to
+	*/
+	function batchAssignTokens(address[] _vaddr, uint[] _vamounts, bool[] _vIcedBalance ) onlyOwner {
+		require ( batchAssignStopped == false );
+		require ( _vaddr.length == _vamounts.length );
+		//Looping into input arrays to assign target amount to each given address
+		for (uint index=0; index<_vaddr.length; index++) {
+			address toAddress = _vaddr[index];
+			uint amount = _vamounts[index] * 10 ** decimals;
+			bool isIced = _vIcedBalance[index];
+			if (balances[toAddress] == 0) {
+				// In case it's filled two times, it only increments once
+				// Assigns the balance
+				assignedSupply += amount ;
+				if (  isIced  == false ) {
+					// Normal account
+					balances[toAddress] = amount;
+					// TODO allowance ??
+				}
+				else {
+					// Iced account. The balance is not affected here
+					icedBalances.push(toAddress) ;
+					uint256 amount2assign 		  = amount * DEFROST_INITIAL_PERCENT / 100;
+					balances[toAddress]               = amount2assign;
+					icedBalances_defrosted[toAddress] = amount2assign;
+					icedBalances_frosted[toAddress]   = amount - amount2assign;
+				}
 			}
+		}
 	}
 
-  function canDefrost() onlyOwner constant returns (bool bCanDefrost){
+	function canDefrost() onlyOwner constant returns (bool bCanDefrost){
 		bCanDefrost = now > START_ICO_TIMESTAMP;
-  }
+	}
 
-
-  function getBlockTimestamp() constant returns (uint256){
-        return now;
-  }
+	function getBlockTimestamp() constant returns (uint256){
+		return now;
+	}
 
 
 	/**
    	* @dev Defrost token (for advisors)
-	 Method called by the owner once per defrost period (1 month)
+	* Method called by the owner once per defrost period (1 month)
    	*/
-	function defrostToken() onlyOwner {
-
+	function defrostToken() {
 		require(now > START_ICO_TIMESTAMP) ;
 		// Looping into the iced accounts
 		for (uint index=0; index<icedBalances.length; index++) {
@@ -124,69 +117,61 @@ contract DRTCoin is StandardToken, Ownable {
 		}
 
 	}
-
- 	function defrostOwner() onlyOwner {
+        /**
+	* Defrost for the owner of the contract
+	*/
+ 	function defrostOwner() {
 		if(now<START_ICO_TIMESTAMP){
 			return;
 		}
-
 		uint256 amountTotal     = ownerFrosted + ownerDefrosted;
 		uint256 targetDeFrosted = (SafeMath.minimum(100,DEFROST_INITIAL_PERCENT_OWNER + elapedMonthsFromICOStart()*DEFROST_MONTHLY_PERCENT_OWNER)) * amountTotal / 100;
 		uint256 amountToRelease = targetDeFrosted - ownerDefrosted;
 		if ( amountToRelease > 0 ) {
 			ownerFrosted   = ownerFrosted - amountToRelease;
 			ownerDefrosted = ownerDefrosted + amountToRelease;
-			balances[owner]               = balances[owner] + amountToRelease;
+			balances[owner] = balances[owner] + amountToRelease;
 		}
 	}
-
 
 	function elapedMonthsFromICOStart() constant returns (uint elapsed) {
 		elapsed = ((now-START_ICO_TIMESTAMP)/60)/DEFROST_PERIOD ;
 	}
 
-  function stopBatchAssign() onlyOwner {
-      	require ( batchAssignStopped == false);
-      	batchAssignStopped = true;
-  }
+	function stopBatchAssign() onlyOwner {
+		require ( batchAssignStopped == false);
+		batchAssignStopped = true;
+	}
 
-  function getAddressBalance(address addr) constant returns (uint256 balance)  {
-      	balance = balances[addr];
-  }
+	function getAddressBalance(address addr) constant returns (uint256 balance)  {
+		balance = balances[addr];
+	}
 
-  function getAddressAndBalance(address addr) constant returns (address _address, uint256 _amount)  {
-	_address = addr;
-      	_amount = balances[addr];
-  }
+	function getAddressAndBalance(address addr) constant returns (address _address, uint256 _amount)  {
+		_address = addr;
+		_amount = balances[addr];
+	}
 
-  function getIcedAddresses() constant returns (address[] vaddr)  {
-      	vaddr = icedBalances;
-  }
+	function getIcedAddresses() constant returns (address[] vaddr)  {
+		vaddr = icedBalances;
+	}
 
-  function getIcedInfos(address addr) constant returns (address icedaddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
-    	icedaddr = addr;
-	balance = balances[addr];
-	frosted = icedBalances_frosted[addr];
-	defrosted = icedBalances_defrosted[addr];
-  }
+	function getIcedInfos(address addr) constant returns (address icedaddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
+		icedaddr = addr;
+		balance = balances[addr];
+		frosted = icedBalances_frosted[addr];
+		defrosted = icedBalances_defrosted[addr];
+	}
 
-  function getOwnerInfos() constant returns (address owneraddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
-    	owneraddr= owner;
-	balance = balances[owneraddr];
-	frosted = ownerFrosted;
-	defrosted = ownerDefrosted;
-  }
+	function getOwnerInfos() constant returns (address owneraddr, uint256 balance, uint256 frosted, uint256 defrosted)  {
+		owneraddr= owner;
+		balance = balances[owneraddr];
+		frosted = ownerFrosted;
+		defrosted = ownerDefrosted;
+	}
 
-
-  function killContract() onlyOwner {
-      suicide(owner);
-  }
-
-	/*
-  modifier max_num_token_not_reached(uint amount) {
-        assert(safeAdd(totalSupply, amount) <= MAX_SUPPLY_NBTOKEN);
-        _;
-  }
-	*/
+	function killContract() onlyOwner {
+		suicide(owner);
+	}
 
 }
