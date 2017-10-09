@@ -18,6 +18,7 @@ contract DRTCoin is StandardToken, Ownable {
     uint256 public constant MAX_SUPPLY_OF_TOKEN = 1300000000 * 10 ** decimals;
 
     // Freeze duration for advisors accounts
+    uint public constant START_ICO_TIMESTAMP = 1507622400;
     uint public constant DEFROST_PERIOD = 43200; // month in minutes  (1 month = 43200 min)
     uint public constant DEFROST_MONTHLY_PERCENT_OWNER = 5; // 5% per month is automatically defrosted
     uint public constant DEFROST_INITIAL_PERCENT_OWNER = 10; // 90% locked
@@ -47,10 +48,8 @@ contract DRTCoin is StandardToken, Ownable {
         balances[owner] = amount2assign;
         ownerDefrosted = amount2assign;
         ownerFrosted = amount - amount2assign;
-
         totalSupply = MAX_SUPPLY_OF_TOKEN;
         assignedSupply = MAX_SUPPLY_OF_TOKEN / 2;
-        START_ICO_TIMESTAMP = now;
     }
 
     /**
