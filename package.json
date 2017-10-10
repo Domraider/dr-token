@@ -38,6 +38,7 @@
     "babel": "^6.23.0",
     "ethereumjs-keys": "0.0.3",
     "truffle-compile": "^2.0.7",
-    "truffle-contract-schema": "0.0.5"
+    "truffle-contract-schema": "0.0.5",
+    "web3-providers-ipc": "^1.0.0-beta.22"
   }
 }

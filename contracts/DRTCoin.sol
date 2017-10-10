@@ -104,7 +104,7 @@ contract DRTCoin is StandardToken, Ownable {
         for (uint index = 0; index < icedBalances.length; index++) {
             address currentAddress = icedBalances[index];
             uint256 amountTotal = icedBalances_frosted[currentAddress] + icedBalances_defrosted[currentAddress];
-            uint256 targetDeFrosted = (SafeMath.minimum(100, DEFROST_INITIAL_PERCENT + elapedMonthsFromICOStart() * DEFROST_MONTHLY_PERCENT)) * amountTotal / 100;
+            uint256 targetDeFrosted = (SafeMath.minimum(100, DEFROST_INITIAL_PERCENT + elapsedMonthsFromICOStart() * DEFROST_MONTHLY_PERCENT)) * amountTotal / 100;
             uint256 amountToRelease = targetDeFrosted - icedBalances_defrosted[currentAddress];
             if (amountToRelease > 0) {
                 icedBalances_frosted[currentAddress] = icedBalances_frosted[currentAddress] - amountToRelease;
