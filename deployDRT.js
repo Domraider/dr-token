@@ -14,24 +14,22 @@ console.log('ownerPwd = ' + ownerPassword)
 const SMARTCONTRACT_ADDRESS_FILEPATH = path.resolve(__dirname) + '/OUTPUTS/smart-contract-address.txt'
 
 let fs = require("fs");
-let net = require("net");
 let Web3 = require('web3'); // https://www.npmjs.com/package/web3
 const DRTCoin = require('./build/DRTCoin.json');
 
-let web3 = new Web3(new Web3.providers.IpcProvider('/Users/vincent/Library/Ethereum/geth.ipc', net));
-//web3.setProvider(new web3.providers.IpcProvider(urlEthereumNode));
+let web3 = new Web3();
+web3.setProvider(new web3.providers.HttpProvider(urlEthereumNode));
 
 console.log("abi = " + DRTCoin.abi)
 
 // Smart contract EVM bytecode as hex
-let code = '0x' + DRTCoin.bytecode;
-
+//let code = '0x' + DRTCoin.bytecode;
+let code = DRTCoin.bytecode;
 //console.log("code = " + code)
 
 // Create Contract proxy class
 let DRTContract = web3.eth.contract(DRTCoin.abi);
 
-console.log(web3.eth.coinbase)
 // Unlock the coinbase account to make transactions out of it
 console.log("Unlocking coinbase account (if not testrpc)");
 try {
@@ -39,7 +37,7 @@ try {
 } catch(e) {
   console.log(e);
   return;
-} 
+}
 
 web3.eth.defaultAccount=web3.eth.accounts[0]
 
@@ -55,7 +53,7 @@ console.log("gasLimit = " + gasLimit);
 
 console.log("Deploying the contract from :" + web3.eth.coinbase);
 let contract = DRTContract.new({from: web3.eth.coinbase, gas: estimatedGas, gasLimit: gasLimit, data: code});
-                                                              
+
 // Transaction has entered to geth memory pool
 console.log("Your contract is being deployed in transaction at http://testnet.etherscan.io/tx/" + contract.transactionHash);
 
