@@ -43,13 +43,13 @@ contract DRTCoin is StandardToken, Ownable {
      */
     function DRTCoin() {
         owner = msg.sender;
-        uint256 amount = MAX_SUPPLY_OF_TOKEN / 2;
+        uint256 amount = 545000000 * 10 ** decimals;
         uint256 amount2assign = amount * DEFROST_INITIAL_PERCENT_OWNER / 100;
         balances[owner] = amount2assign;
         ownerDefrosted = amount2assign;
         ownerFrosted = amount - amount2assign;
         totalSupply = MAX_SUPPLY_OF_TOKEN;
-        assignedSupply = MAX_SUPPLY_OF_TOKEN / 2;
+        assignedSupply = amount;
     }
 
     /**
@@ -98,7 +98,7 @@ contract DRTCoin is StandardToken, Ownable {
      * @dev Defrost token (for advisors)
      * Method called by the owner once per defrost period (1 month)
      */
-    function defrostToken() {
+    function defrostToken() onlyOwner {
         require(now > START_ICO_TIMESTAMP);
         // Looping into the iced accounts
         for (uint index = 0; index < icedBalances.length; index++) {
@@ -117,7 +117,7 @@ contract DRTCoin is StandardToken, Ownable {
     /**
      * Defrost for the owner of the contract
      */
-    function defrostOwner() {
+    function defrostOwner() onlyOwner {
         if (now < START_ICO_TIMESTAMP) {
             return;
         }
@@ -165,10 +165,6 @@ contract DRTCoin is StandardToken, Ownable {
         balance = balances[owneraddr];
         frosted = ownerFrosted;
         defrosted = ownerDefrosted;
-    }
-
-    function killContract() onlyOwner {
-        selfdestruct(owner);
     }
 
 }
